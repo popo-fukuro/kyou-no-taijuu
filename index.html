@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>きょうの体重</title>
+<meta name="description" content="今日の体重を1つ入れるだけで、ここ2週間の折れ線グラフが伸びる体重記録。登録・インストール不要。">
+<!-- SNS で共有されたときの表示 -->
+<meta property="og:title" content="きょうの体重">
+<meta property="og:description" content="今日の体重を1つ入れるだけで、ここ2週間の折れ線グラフが伸びる体重記録。登録・インストール不要。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://popo-fukuro.github.io/kyou-no-taijuu/">
+<meta name="twitter:card" content="summary">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f3ef;
+    --surface: #fcfcfb;
+    --border: #e4e2dc;
+    --grid: #ebe9e3;
+    --text: #0b0b0b;
+    --text-2: #52514e;
+    --text-3: #7d7b75;
+    --series: #2a78d6;
+    --series-wash: rgba(42, 120, 214, 0.10);
+    --accent: #2a78d6;
+    --accent-ink: #ffffff;
+    --down-bg: #e3f3e8;
+    --down-ink: #135e2c;
+    --up-bg: #fbeadf;
+    --up-ink: #8a3511;
+    --flat-bg: #ecebe6;
+    --flat-ink: #3d3c39;
+    --danger: #b3261e;
+    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #111110;
+      --surface: #1a1a19;
+      --border: #2e2d2b;
+      --grid: #292826;
+      --text: #ffffff;
+      --text-2: #c3c2b7;
+      --text-3: #8f8e86;
+      --series: #3987e5;
+      --series-wash: rgba(57, 135, 229, 0.14);
+      --accent: #3987e5;
+      --accent-ink: #ffffff;
+      --down-bg: #15301f;
+      --down-ink: #8fdcaa;
+      --up-bg: #3a2216;
+      --up-ink: #f4b28f;
+      --flat-bg: #2a2a28;
+      --flat-ink: #d6d5cd;
+      --danger: #f2827b;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #111110;
+    --surface: #1a1a19;
+    --border: #2e2d2b;
+    --grid: #292826;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --text-3: #8f8e86;
+    --series: #3987e5;
+    --series-wash: rgba(57, 135, 229, 0.14);
+    --accent: #3987e5;
+    --accent-ink: #ffffff;
+    --down-bg: #15301f;
+    --down-ink: #8fdcaa;
+    --up-bg: #3a2216;
+    --up-ink: #f4b28f;
+    --flat-bg: #2a2a28;
+    --flat-ink: #d6d5cd;
+    --danger: #f2827b;
+    --shadow: none;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+  main {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px 16px 48px;
+  }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .02em; }
+  .today { color: var(--text-3); font-size: 13px; }
+  .lead { color: var(--text-2); font-size: 13px; margin: -8px 0 14px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  /* 入力 */
+  form.entry { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+  .field label { display: block; font-size: 13px; color: var(--text-2); margin-bottom: 4px; }
+  .weight-wrap { position: relative; }
+  #weight {
+    width: 100%;
+    font-size: 32px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    padding: 8px 44px 8px 14px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    min-height: 60px;
+  }
+  #weight:focus { border-color: var(--accent); }
+  #weight::placeholder { color: var(--text-3); font-weight: 600; opacity: .5; }
+  .unit { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text-2); font-size: 16px; pointer-events: none; }
+  button.save {
+    min-height: 60px;
+    padding: 0 22px;
+    font-size: 17px;
+    font-weight: 700;
+    border: 0;
+    border-radius: 12px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    cursor: pointer;
+  }
+  button.save:active { transform: translateY(1px); }
+  .sub-row { margin-top: 10px; font-size: 13px; color: var(--text-2); }
+  .sub-row:empty { display: none; }
+  .error { color: var(--danger); font-size: 13px; margin-top: 6px; }
+  .error:empty { display: none; }
+
+  /* サマリー */
+  .summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .latest .label { font-size: 13px; color: var(--text-2); }
+  .latest .num { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .latest .num small { font-size: 16px; font-weight: 600; color: var(--text-2); margin-left: 2px; }
+  .trend {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-radius: 999px;
+    font-weight: 700; font-size: 15px;
+    background: var(--flat-bg); color: var(--flat-ink);
+  }
+  .trend[hidden] { display: none; }
+  .trend.down { background: var(--down-bg); color: var(--down-ink); }
+  .trend.up { background: var(--up-bg); color: var(--up-ink); }
+  .trend .arrow { font-size: 18px; line-height: 1; }
+  .chart-title { font-size: 13px; color: var(--text-2); margin: 4px 0 2px; }
+
+  /* グラフ */
+  .chart { position: relative; width: 100%; }
+  .chart svg { display: block; width: 100%; height: 260px; overflow: visible; touch-action: pan-y; }
+  .tick { fill: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .tick.today-tick { fill: var(--text); font-weight: 700; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .baseline-ref { stroke: var(--text-3); stroke-width: 1; opacity: .55; }
+  .ref-label { fill: var(--text-3); font-size: 11px; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+  .line { fill: none; stroke: var(--series); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .area { fill: var(--series-wash); }
+  .dot { fill: var(--series); stroke: var(--surface); stroke-width: 2; }
+  .end-label { fill: var(--text); font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .crosshair { stroke: var(--text-3); stroke-width: 1; }
+  .pop { transform-box: fill-box; transform-origin: center; animation: pop .35s ease-out both; animation-delay: .3s; }
+  @keyframes pop { from { transform: scale(0); } 70% { transform: scale(1.35); } to { transform: scale(1); } }
+  .fade-in { animation: fade .3s ease-out both; animation-delay: .4s; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .tooltip {
+    position: absolute; pointer-events: none;
+    background: var(--text); color: var(--surface);
+    font-size: 12px; padding: 6px 9px; border-radius: 8px;
+    white-space: nowrap; transform: translate(-50%, calc(-100% - 12px));
+    opacity: 0; transition: opacity .1s;
+    font-variant-numeric: tabular-nums;
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip b { font-size: 14px; }
+  .empty {
+    height: 200px; display: grid; place-items: center; text-align: center;
+    color: var(--text-2); font-size: 14px; border: 1px dashed var(--border); border-radius: 12px; padding: 16px;
+  }
+
+  /* 一覧 */
+  details summary { cursor: pointer; font-size: 14px; color: var(--text-2); padding: 4px 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 8px 4px; border-bottom: 1px solid var(--grid); font-size: 14px; }
+  th { color: var(--text-3); font-weight: 600; font-size: 12px; }
+  td.num { text-align: right; }
+  th.num { text-align: right; }
+  td.diff { color: var(--text-2); text-align: right; font-size: 13px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px);
+    background: var(--text); color: var(--surface);
+    padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 600;
+    opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none;
+    max-width: calc(100% - 32px); width: max-content; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .note { font-size: 12px; color: var(--text-3); text-align: center; margin-top: 16px; }
+
+  @media (max-width: 420px) {
+    #weight { font-size: 28px; }
+    button.save { padding: 0 16px; }
+    .latest .num { font-size: 30px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pop, .fade-in { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>きょうの体重</h1>
+    <span class="today" id="todayLabel"></span>
+  </header>
+  <p class="lead">1日1回、今日の体重を入れるだけ。ここ2週間の増えた・減ったが折れ線でわかります。</p>
+
+  <section class="card">
+    <form class="entry" id="entryForm" autocomplete="off" novalidate>
+      <div class="field">
+        <label for="weight">今日の体重</label>
+        <div class="weight-wrap">
+          <input id="weight" name="weight" type="text" inputmode="decimal" enterkeyhint="done" placeholder="00.0" aria-describedby="err" autofocus>
+          <span class="unit">kg</span>
+        </div>
+      </div>
+      <button class="save" type="button" id="saveBtn">記録</button>
+    </form>
+    <div class="sub-row" id="todayHint"></div>
+    <div class="error" id="err" role="alert"></div>
+  </section>
+
+  <section class="card" aria-labelledby="chartTitle">
+    <div class="summary">
+      <div class="latest">
+        <div class="label" id="latestLabel">最新</div>
+        <div class="num" id="latestNum">--<small>kg</small></div>
+      </div>
+      <div class="trend" id="trend" hidden></div>
+    </div>
+    <div class="chart-title" id="chartTitle">ここ2週間の体重</div>
+    <div class="chart" id="chart">
+      <svg id="svg" role="img" aria-label="ここ2週間の体重の折れ線グラフ"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <details id="listDetails">
+      <summary>記録の一覧（<span id="count">0</span>件）</summary>
+      <table>
+        <thead><tr><th>日付</th><th class="num">体重</th><th class="num">前回比</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </details>
+  </section>
+
+  <p class="note">医療・ダイエットの助言ではありません。データはこの端末の中だけに保存されます（共用の端末では他の人にも見えます）。</p>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'daily-weight-v1'; // 公開先(github.io)は他のサービスと同じ保存場所を共有するので、名前を固有にする
+  var WINDOW_DAYS = 14;
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // ---------- 日付ユーティリティ ----------
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function toKey(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function fromKey(k) { var p = k.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(d, n) { var x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() + n); return x; }
+  function md(k) { var d = fromKey(k); return (d.getMonth() + 1) + '/' + d.getDate(); }
+  var WEEK = ['日', '月', '火', '水', '木', '金', '土'];
+  function mdw(k) { var d = fromKey(k); return md(k) + '（' + WEEK[d.getDay()] + '）'; }
+  function todayKey() { return toKey(new Date()); }
+  function fmt(n) { return n.toFixed(1); }
+  function signed(n) {
+    var r = Math.round(n * 10) / 10;
+    if (r === 0) return '±0.0';
+    return (r > 0 ? '+' : '−') + Math.abs(r).toFixed(1);
+  }
+
+  // ---------- 保存 ----------
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      var arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return [];
+      return arr.filter(function (r) {
+        return r && typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && typeof r.kg === 'number' && isFinite(r.kg);
+      });
+    } catch (e) { return []; }
+  }
+  function save(list) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); return true; }
+    catch (e) { return false; }
+  }
+
+  var records = load().sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+
+  // ---------- 要素 ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('entryForm'), weightEl = $('weight'), errEl = $('err');
+  var svg = $('svg'), chartEl = $('chart'), tooltip = $('tooltip');
+
+  // 今日の分だけ入力できる。今日すでに記録があれば「上書きになる」と知らせる
+  function updateTodayHint() {
+    $('todayLabel').textContent = mdw(todayKey());
+    var rec = records.find(function (r) { return r.date === todayKey(); });
+    $('todayHint').textContent = rec ? '今日は記録済み。入れ直すと上書きします' : '';
+  }
+
+  function updatePlaceholder() {
+    var last = records[records.length - 1];
+    weightEl.placeholder = last ? fmt(last.kg) : '00.0';
+  }
+
+  // 全角数字・カンマも受け付ける
+  function parseWeight(s) {
+    s = String(s).trim()
+      .replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+      .replace(/[．。，,]/g, '.')
+      .replace(/kg$/i, '').trim();
+    if (!/^\d{1,3}(\.\d+)?$/.test(s)) return NaN;
+    return Math.round(parseFloat(s) * 10) / 10;
+  }
+
+  var animateNext = null; // 直近に追加した日付（グラフを伸ばす演出用）
+
+  // フォーム送信に頼らずに保存する（埋め込み表示などでフォーム送信が禁止されていても動くように）
+  form.addEventListener('submit', function (e) { e.preventDefault(); saveToday(); });
+  $('saveBtn').addEventListener('click', saveToday);
+  weightEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); saveToday(); }
+  });
+  function saveToday() {
+    errEl.textContent = '';
+    var kg = parseWeight(weightEl.value);
+    if (weightEl.value.trim() === '') { errEl.textContent = '体重を入れてね（例：62.4）'; weightEl.focus(); return; }
+    if (isNaN(kg) || kg < 20 || kg > 300) { errEl.textContent = '20〜300 の数字で入れてね（例：62.4）'; weightEl.focus(); return; }
+    var date = todayKey(); // 記録できるのは今日の分だけ
+
+    var idx = -1;
+    for (var i = 0; i < records.length; i++) if (records[i].date === date) idx = i;
+    var updated = idx >= 0;
+    if (updated) records[idx].kg = kg; else records.push({ date: date, kg: kg });
+    records.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+
+    if (!save(records)) {
+      errEl.textContent = 'このブラウザでは保存できませんでした（プライベートモードかも）。画面上には表示しています。';
+    }
+    animateNext = date;
+    weightEl.value = '';
+    weightEl.blur();
+    renderAll();
+    toast(updated ? '今日の記録を ' + fmt(kg) + 'kg に更新しました' : fmt(kg) + 'kg を記録しました');
+  }
+
+  // ---------- 2週間ウィンドウ ----------
+  function windowDays() {
+    var end = new Date();
+    var days = [];
+    for (var i = WINDOW_DAYS - 1; i >= 0; i--) days.push(toKey(addDays(end, -i)));
+    return days;
+  }
+
+  // ---------- サマリー ----------
+  function renderSummary() {
+    var last = records[records.length - 1];
+    var latestNum = $('latestNum'), latestLabel = $('latestLabel'), trend = $('trend');
+    if (!last) {
+      latestNum.innerHTML = '--<small>kg</small>';
+      latestLabel.textContent = '最新';
+      trend.hidden = true;
+      return;
+    }
+    latestNum.innerHTML = fmt(last.kg) + '<small>kg</small>';
+    latestLabel.textContent = last.date === todayKey() ? '今日' : '最新（' + md(last.date) + '）';
+
+    var days = windowDays();
+    var inWin = records.filter(function (r) { return r.date >= days[0] && r.date <= days[days.length - 1]; });
+    trend.hidden = false;
+    trend.className = 'trend';
+    if (inWin.length < 2) {
+      trend.innerHTML = '<span class="arrow" aria-hidden="true">✎</span>あと' + (2 - inWin.length) + '件でくらべられるよ';
+      return;
+    }
+    var first = inWin[0], lastW = inWin[inWin.length - 1];
+    var diff = Math.round((lastW.kg - first.kg) * 10) / 10;
+    if (diff < 0) {
+      trend.classList.add('down');
+      trend.innerHTML = '<span class="arrow" aria-hidden="true">↓</span>' + md(first.date) + 'から ' + Math.abs(diff).toFixed(1) + 'kg 減';
+    } else if (diff > 0) {
+      trend.classList.add('up');
+      trend.innerHTML = '<span class="arrow" aria-hidden="true">↑</span>' + md(first.date) + 'から ' + diff.toFixed(1) + 'kg 増';
+    } else {
+      trend.innerHTML = '<span class="arrow" aria-hidden="true">→</span>' + md(first.date) + 'から 変わらず';
+    }
+  }
+
+  // ---------- グラフ ----------
+  function el(name, attrs, parent) {
+    var n = document.createElementNS(SVG_NS, name);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+
+  function niceStep(span) {
+    var steps = [0.2, 0.5, 1, 2, 5, 10, 20];
+    for (var i = 0; i < steps.length; i++) if (span / steps[i] <= 5) return steps[i];
+    return 50;
+  }
+
+  var chartState = null;
+
+  function renderChart() {
+    var days = windowDays();
+    var start = days[0], end = days[days.length - 1];
+    var pts = records.filter(function (r) { return r.date >= start && r.date <= end; });
+
+    // 既存の空表示を消す
+    var oldEmpty = chartEl.querySelector('.empty');
+    if (oldEmpty) oldEmpty.remove();
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    tooltip.classList.remove('show');
+
+    if (pts.length === 0) {
+      svg.style.display = 'none';
+      var empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = records.length
+        ? 'ここ2週間の記録がまだありません。今日の体重を入れるとグラフが始まります。'
+        : 'まだ記録がありません。上に今日の体重を入れて「記録」を押すと、ここに折れ線グラフが伸びていきます。';
+      chartEl.insertBefore(empty, tooltip);
+      chartState = null;
+      return;
+    }
+    svg.style.display = '';
+
+    var W = Math.max(280, chartEl.clientWidth || 320);
+    var H = 260;
+    var narrow = W < 420;
+    var m = { top: 22, right: narrow ? 52 : 60, bottom: 28, left: 36 };
+    var iw = W - m.left - m.right, ih = H - m.top - m.bottom;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+
+    // Y軸範囲：最低でも2kg幅をとって、少しの増減で暴れないように
+    var vals = pts.map(function (p) { return p.kg; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var mid = (lo + hi) / 2;
+    var span = Math.max(2, (hi - lo) * 1.3);
+    lo = mid - span / 2; hi = mid + span / 2;
+    var step = niceStep(hi - lo);
+    lo = Math.floor(lo / step) * step;
+    hi = Math.ceil(hi / step) * step;
+
+    var dayIndex = {};
+    days.forEach(function (d, i) { dayIndex[d] = i; });
+    function x(i) { return m.left + (iw * i) / (WINDOW_DAYS - 1); }
+    function y(v) { return m.top + ih - ((v - lo) / (hi - lo)) * ih; }
+
+    // グリッド + Y目盛り
+    var g = el('g', {}, svg);
+    for (var v = lo; v <= hi + 1e-9; v += step) {
+      var yy = Math.round(y(v)) + 0.5;
+      el('line', { x1: m.left, x2: W - m.right + 8, y1: yy, y2: yy, 'class': 'gridline' }, g);
+      var t = el('text', { x: m.left - 6, y: yy + 4, 'text-anchor': 'end', 'class': 'tick' }, g);
+      t.textContent = step < 1 ? v.toFixed(1) : String(Math.round(v));
+    }
+
+    // X目盛り（狭い画面では間引く。今日は必ず表示）
+    var every = narrow ? 3 : 2;
+    days.forEach(function (d, i) {
+      var fromEnd = WINDOW_DAYS - 1 - i;
+      if (fromEnd % every !== 0) return;
+      var isToday = i === WINDOW_DAYS - 1;
+      var t = el('text', { x: x(i), y: H - 8, 'text-anchor': 'middle', 'class': 'tick' + (isToday ? ' today-tick' : '') }, svg);
+      t.textContent = isToday ? '今日' : md(d);
+    });
+
+    var coords = pts.map(function (p) { return { x: x(dayIndex[p.date]), y: y(p.kg), p: p }; });
+
+    // スタート地点の基準線（2件以上のとき）：今どっちにいるかがひと目でわかる
+    var refLabel = null;
+    if (coords.length >= 2) {
+      var by = Math.round(coords[0].y) + 0.5;
+      var lastC = coords[coords.length - 1];
+      // 終点ラベルとかぶるとき（始点と終点が近い）は、線とラベルをグラフの左端から出す
+      var near = Math.abs(lastC.y - by) < 16 && lastC.x - coords[0].x < 110;
+      var refX = near ? m.left : coords[0].x;
+      el('line', { x1: refX, x2: W - m.right + 8, y1: by, y2: by, 'class': 'baseline-ref' }, svg);
+      // 左端に寄せてもまだ終点に近いときは、ラベルを出さず線だけにする
+      if (!near || lastC.x - m.left >= 110) {
+        // 文字のある範囲で線が基準線より上を通るなら、文字は基準線の下に出す
+        var labelAbove = !coords.some(function (c) { return c.x >= refX && c.x <= refX + 90 && c.y < by - 2; });
+        refLabel = el('text', { x: refX + 4, y: labelAbove ? by - 5 : by + 14, 'class': 'ref-label' }, svg);
+        refLabel.textContent = 'スタート ' + fmt(coords[0].p.kg);
+      }
+    }
+
+    // 面 + 線
+    if (coords.length >= 2) {
+      var d = coords.map(function (c, i) { return (i ? 'L' : 'M') + c.x.toFixed(1) + ',' + c.y.toFixed(1); }).join(' ');
+      var area = el('path', {
+        d: d + ' L' + coords[coords.length - 1].x.toFixed(1) + ',' + (m.top + ih) + ' L' + coords[0].x.toFixed(1) + ',' + (m.top + ih) + ' Z',
+        'class': 'area'
+      }, svg);
+      var line = el('path', { d: d, 'class': 'line' }, svg);
+      // 「スタート」の文字は線より手前に出して、線がかぶっても読めるようにする
+      if (refLabel) svg.appendChild(refLabel);
+
+      // 新しく足した点が最後なら、最後の区間を「伸ばす」
+      var lastIsNew = animateNext && coords[coords.length - 1].p.date === animateNext;
+      if (lastIsNew && !reducedMotion() && line.getTotalLength) {
+        var total = line.getTotalLength();
+        var a = coords[coords.length - 2], b = coords[coords.length - 1];
+        var seg = Math.hypot(b.x - a.x, b.y - a.y);
+        line.style.strokeDasharray = total + ' ' + total;
+        line.style.strokeDashoffset = seg;
+        area.style.opacity = '0';
+        area.style.transition = 'opacity .3s ease-out .35s';
+        line.getBoundingClientRect();
+        line.style.transition = 'stroke-dashoffset .45s cubic-bezier(.3,.7,.3,1)';
+        requestAnimationFrame(function () {
+          line.style.strokeDashoffset = '0';
+          area.style.opacity = '1';
+        });
+      }
+    }
+
+    // 点
+    var lastIdx = coords.length - 1;
+    coords.forEach(function (c, i) {
+      var isLast = i === lastIdx;
+      var dot = el('circle', { cx: c.x, cy: c.y, r: isLast ? 6 : 4, 'class': 'dot' }, svg);
+      if (animateNext && c.p.date === animateNext && !reducedMotion()) dot.classList.add('pop');
+    });
+
+    // 最新値の直接ラベル
+    var lc = coords[lastIdx];
+    var lab = el('text', { x: lc.x + 10, y: lc.y + 4, 'class': 'end-label' }, svg);
+    lab.textContent = fmt(lc.p.kg);
+    if (animateNext && !reducedMotion()) lab.classList.add('fade-in');
+
+    // ホバー層
+    var cross = el('line', { x1: 0, x2: 0, y1: m.top, y2: m.top + ih, 'class': 'crosshair', visibility: 'hidden' }, svg);
+    var hit = el('rect', { x: m.left - 12, y: 0, width: iw + 24, height: H, fill: 'transparent' }, svg);
+
+    chartState = { coords: coords, W: W, cross: cross, hit: hit };
+    animateNext = null;
+  }
+
+  function reducedMotion() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function showTip(clientX) {
+    if (!chartState) return;
+    var rect = svg.getBoundingClientRect();
+    var scale = chartState.W / rect.width;
+    var px = (clientX - rect.left) * scale;
+    var best = null, bd = Infinity;
+    chartState.coords.forEach(function (c) {
+      var dd = Math.abs(c.x - px);
+      if (dd < bd) { bd = dd; best = c; }
+    });
+    if (!best) return;
+    var cross = chartState.cross;
+    cross.setAttribute('x1', best.x); cross.setAttribute('x2', best.x);
+    cross.setAttribute('visibility', 'visible');
+
+    var i = records.findIndex(function (r) { return r.date === best.p.date; });
+    var prev = i > 0 ? records[i - 1] : null;
+    var html = mdw(best.p.date) + '<br><b>' + fmt(best.p.kg) + ' kg</b>';
+    if (prev) html += '　前回比 ' + signed(best.p.kg - prev.kg);
+    tooltip.innerHTML = html;
+
+    var left = best.x / scale, top = best.y / scale;
+    var tw = tooltip.offsetWidth || 120;
+    left = Math.min(Math.max(left, tw / 2 + 2), rect.width - tw / 2 - 2);
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+    tooltip.classList.add('show');
+  }
+  function hideTip() {
+    tooltip.classList.remove('show');
+    if (chartState) chartState.cross.setAttribute('visibility', 'hidden');
+  }
+  svg.addEventListener('pointermove', function (e) { showTip(e.clientX); });
+  svg.addEventListener('pointerdown', function (e) { showTip(e.clientX); });
+  // スマホは指を離すと pointerleave が来るので、タッチのときはグラフの外をタップしたら消す
+  svg.addEventListener('pointerleave', function (e) { if (e.pointerType !== 'touch') hideTip(); });
+  document.addEventListener('pointerdown', function (e) { if (!svg.contains(e.target)) hideTip(); });
+
+  // ---------- 一覧 ----------
+  function renderList() {
+    var tb = $('tbody');
+    tb.innerHTML = '';
+    $('count').textContent = records.length;
+    for (var i = records.length - 1; i >= 0; i--) {
+      var r = records[i], prev = records[i - 1];
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + mdw(r.date) + (r.date.slice(0, 4) !== todayKey().slice(0, 4) ? ' ' + r.date.slice(0, 4) : '') + '</td>' +
+        '<td class="num">' + fmt(r.kg) + ' kg</td>' +
+        '<td class="diff">' + (prev ? signed(r.kg - prev.kg) : '—') + '</td>';
+      tb.appendChild(tr);
+    }
+  }
+
+  // ---------- トースト ----------
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+
+  function renderAll() {
+    renderSummary();
+    renderChart();
+    renderList();
+    updatePlaceholder();
+    updateTodayHint();
+  }
+
+  // 開きっぱなしで日付をまたいだら、「今日」を描き直す
+  var shownDay = todayKey();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && todayKey() !== shownDay) { shownDay = todayKey(); renderAll(); }
+  });
+
+  // 画面幅が変わったら描き直す
+  var lastW = 0;
+  function onResize() {
+    var w = chartEl.clientWidth;
+    if (Math.abs(w - lastW) > 2) { lastW = w; renderChart(); }
+  }
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe(chartEl);
+  else window.addEventListener('resize', onResize);
+
+  renderAll();
+  lastW = chartEl.clientWidth;
+})();
+</script>
+</body>
+</html>
